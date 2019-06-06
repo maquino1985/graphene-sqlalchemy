@@ -1,6 +1,5 @@
 import ast
 import re
-import sys
 
 from setuptools import find_packages, setup
 
@@ -32,11 +31,11 @@ tests_require = [
 ]
 
 setup(
-    name="graphene-sqlalchemy",
+    name="mja-graphene-sqlalchemy",
     version=version,
     description="Graphene SQLAlchemy integration",
     long_description=open("README.rst").read(),
-    url="https://github.com/graphql-python/graphene-sqlalchemy",
+    url="https://github.com/maquino1985/graphene-sqlalchemy",
     author="Syrus Akbary",
     author_email="me@syrusakbary.com",
     license="MIT",

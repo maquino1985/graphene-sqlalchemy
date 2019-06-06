@@ -1,12 +1,11 @@
 import pytest
+from graphene import Enum as GrapheneEnum
 from sqlalchemy.types import Enum as SQLAlchemyEnum
 
-from graphene import Enum as GrapheneEnum
-
+from .models import Pet
 from ..registry import Registry
 from ..types import SQLAlchemyObjectType
 from ..utils import EnumValue
-from .models import Pet
 
 
 def test_register_object_type():
@@ -50,7 +49,7 @@ def test_register_orm_field_incorrect_types():
     class Spam:
         pass
 
-    re_err = "Expected SQLAlchemyObjectType, but got: .*Spam"
+    re_err = r"Expected one of \['SQLAlchemyObjectType', 'SQLAlchemyInterface', 'SQLAlchemyInputObjectType'\], but got: .*Spam"
     with pytest.raises(TypeError, match=re_err):
         reg.register_orm_field(Spam, "name", Pet.name)
 

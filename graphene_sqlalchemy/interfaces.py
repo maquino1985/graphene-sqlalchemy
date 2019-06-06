@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Tuple, Union
 from uuid import UUID
 
@@ -20,7 +21,6 @@ from graphene.relay import Connection, Node
 from graphene.types.utils import yank_fields_from_attrs
 from .fields import default_connection_field_factory, UnsortedSQLAlchemyConnectionField
 from .registry import get_global_registry
-import logging
 
 log = logging.getLogger(__name__)
 

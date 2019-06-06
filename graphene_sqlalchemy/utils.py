@@ -1,5 +1,6 @@
 import re
 import warnings
+from collections import OrderedDict
 
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import class_mapper, object_mapper
@@ -80,7 +81,6 @@ _deprecated_object_type_cache = {}
 
 
 def _deprecated_object_type_for_model(cls, name):
-
     try:
         return _deprecated_object_type_cache[cls, name]
     except KeyError:
@@ -117,6 +117,11 @@ def sort_enum_for_model(cls, name=None, symbol_name=None):
     )
 
 
+def pluralize_name(name):
+    s1 = re.sub("y$", "ie", name)
+    return "{}s".format(s1)
+
+
 def sort_argument_for_model(cls, has_default=True):
     """Get a Graphene Argument for sorting the given model class.
 
@@ -140,3 +145,55 @@ def sort_argument_for_model(cls, has_default=True):
         enum.default = None
 
     return Argument(List(enum), default_value=enum.default)
+
+
+argument_cache = {}
+field_cache = {}
+
+
+class FilterArgument:
+    pass
+
+
+class FilterField:
+    pass
+
+
+def create_filter_field(column):
+    from graphene import InputObjectType, Field
+    from .converter import convert_sqlalchemy_type
+
+    graphene_type = convert_sqlalchemy_type(column.type, column)
+    if graphene_type.__class__ == Field:
+        return None
+
+    name = "{}Filter".format(str(graphene_type.__class__))
+    if name in field_cache:
+        return Field(field_cache[name])
+
+    fields = OrderedDict((key, Field(graphene_type.__class__))
+                         for key in ["equal", "notEqual", "lessThan", "greaterThan", "like"])
+    field_class: InputObjectType = type(name, (FilterField, InputObjectType), {})
+    field_class._meta.fields.update(fields)
+
+    field_cache[name] = field_class
+    return Field(field_class)
+
+
+def create_filter_argument(cls):
+    from graphene import Argument, InputObjectType
+    from sqlalchemy import inspect
+    name = "{}Filter".format(cls.__name__)
+    if name in argument_cache:
+        return Argument(argument_cache[name])
+    import re
+
+    NAME_PATTERN = r"^[_a-zA-Z][_a-zA-Z0-9]*$"
+    COMPILED_NAME_PATTERN = re.compile(NAME_PATTERN)
+    fields = OrderedDict((column.name, field)
+                         for column, field in [(column, create_filter_field(column))
+                                               for column in inspect(cls).columns.values()] if field and COMPILED_NAME_PATTERN.match(column.name))
+    argument_class: InputObjectType = type(name, (FilterArgument, InputObjectType), {})
+    argument_class._meta.fields.update(fields)
+    argument_cache[name] = argument_class
+    return Argument(argument_class)
