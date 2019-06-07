@@ -14,7 +14,7 @@ from promise import Promise, is_thenable
 from sqlalchemy import inspect, func
 from sqlalchemy.orm.query import Query
 
-from graphene_sqlalchemy.converter import convert_sqlalchemy_type
+from .converter import convert_sqlalchemy_type
 from .utils import get_query
 
 log = logging.getLogger()
@@ -51,7 +51,7 @@ class UnsortedSQLAlchemyConnectionField(ConnectionField):
         query = get_query(model, info.context)
         if sort is not None:
             if isinstance(sort, str):
-                query = query.order_by(sort)
+                query = query.order_by(sort.value)
             else:
                 query = query.order_by(*(col.value for col in sort))
         return query
@@ -177,7 +177,7 @@ def create_filter_field(column):
     return Field(field_class)
 
 
-class SQLAlchemyFilteredConnectionField(SQLAlchemyConnectionField):
+class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
     def __init__(self, type_, *args, **kwargs):
         model = type_._meta.model
         kwargs.setdefault("filter", create_filter_argument(model))

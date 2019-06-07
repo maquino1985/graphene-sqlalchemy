@@ -252,7 +252,7 @@ class SQLAlchemyInputObjectType(InputObjectType):
         if not registry:
             registry = get_global_registry()
         sqla_fields = yank_fields_from_attrs(
-            construct_fields(model, registry, only_fields, exclude_fields + tuple(autoexclude), connection_field_factory),
+            construct_fields(cls, model, registry, only_fields, exclude_fields + tuple(autoexclude), connection_field_factory),
             _as=Field,
         )
         # create accessor for model to be retrieved for querying
