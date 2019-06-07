@@ -129,7 +129,6 @@ class SQLAlchemyInterface(Node):
 
     @classmethod
     def resolve_type(cls, instance, info, registry: Optional[Registry] = None):
-        print(type(instance))
         if isinstance(instance, graphene.ObjectType):
             return type(instance)
         if not registry:
