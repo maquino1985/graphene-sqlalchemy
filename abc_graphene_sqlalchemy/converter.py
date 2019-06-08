@@ -1,11 +1,10 @@
+from graphene import (ID, Boolean, Dynamic, Enum, Field, Float, Int, List,
+                      String)
+from graphene.types.json import JSONString
 from singledispatch import singledispatch
 from sqlalchemy import types
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import interfaces
-
-from graphene import (ID, Boolean, Dynamic, Enum, Field, Float, Int, List,
-                      String)
-from graphene.types.json import JSONString
 
 from .enums import enum_for_sa_enum
 from .registry import get_global_registry

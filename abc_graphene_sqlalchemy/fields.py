@@ -187,7 +187,7 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
     def get_query(cls, model, info: ResolveInfo, filter=None, sort=None, group_by=None, order_by=None, **kwargs):
         query = super().get_query(model, info, sort=None, **kwargs)
         # columns = inspect(model).columns.values()
-        from graphene_sqlalchemy.types import SQLAlchemyInputObjectType
+        from abc_graphene_sqlalchemy.types import SQLAlchemyInputObjectType
 
         for filter_name, filter_value in kwargs.items():
             model_filter_column = getattr(model, filter_name, None)

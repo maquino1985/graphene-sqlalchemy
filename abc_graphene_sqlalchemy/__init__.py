@@ -2,7 +2,7 @@ from .fields import SQLAlchemyConnectionField, SQLAlchemyFilteredConnectionField
 from .types import SQLAlchemyObjectType, SQLAlchemyInputObjectType, SQLAlchemyInterface, SQLAlchemyMutation, SQLAlchemyAutoSchemaFactory
 from .utils import get_query, get_session
 
-__version__ = "2.2.0b1"
+__version__ = "2.2.1"
 
 __all__ = [
     "__version__",

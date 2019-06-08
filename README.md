@@ -38,7 +38,7 @@ To create a GraphQL schema for it you simply have to write the following:
 
 ```python
 import graphene
-from graphene_sqlalchemy import SQLAlchemyObjectType
+from abc_graphene_sqlalchemy import SQLAlchemyObjectType
 
 class User(SQLAlchemyObjectType):
     class Meta:
@@ -75,7 +75,7 @@ result = schema.execute(query, context_value={'session': db_session})
 You may also subclass SQLAlchemyObjectType by providing `abstract = True` in
 your subclasses Meta:
 ```python
-from graphene_sqlalchemy import SQLAlchemyObjectType
+from abc_graphene_sqlalchemy import SQLAlchemyObjectType
 
 class ActiveSQLAlchemyObjectType(SQLAlchemyObjectType):
     class Meta:

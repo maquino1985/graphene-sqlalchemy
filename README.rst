@@ -44,7 +44,7 @@ following:
 
 .. code:: python
 
-    from graphene_sqlalchemy import SQLAlchemyObjectType
+    from abc_graphene_sqlalchemy import SQLAlchemyObjectType
 
     class User(SQLAlchemyObjectType):
         class Meta:

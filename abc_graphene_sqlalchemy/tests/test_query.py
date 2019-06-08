@@ -1,9 +1,9 @@
 import graphene
 from graphene.relay import Connection, Node
 
+from .models import Article, Editor, HairKind, Pet, Reporter
 from ..fields import SQLAlchemyConnectionField
 from ..types import SQLAlchemyObjectType
-from .models import Article, Editor, HairKind, Pet, Reporter
 
 
 def to_std_dicts(value):

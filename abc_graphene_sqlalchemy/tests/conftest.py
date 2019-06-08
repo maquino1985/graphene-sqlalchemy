@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from ..registry import reset_global_registry
 from .models import Base
+from ..registry import reset_global_registry
 
 test_db_url = 'sqlite://'  # use in-memory database for tests
 

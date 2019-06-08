@@ -1,8 +1,8 @@
-from py.test import raises
+from pytest import raises
 
+from .models import Reporter
 from ..registry import Registry
 from ..types import SQLAlchemyObjectType
-from .models import Reporter
 
 
 def test_should_raise_if_no_model():

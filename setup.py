@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 _version_re = re.compile(r"__version__\s+=\s+(.*)")
 
-with open("graphene_sqlalchemy/__init__.py", "rb") as f:
+with open("abc_graphene_sqlalchemy/__init__.py", "rb") as f:
     version = str(
         ast.literal_eval(_version_re.search(f.read().decode("utf-8")).group(1))
     )
@@ -31,7 +31,7 @@ tests_require = [
 ]
 
 setup(
-    name="mja-graphene-sqlalchemy",
+    name="abc-graphene-sqlalchemy",
     version=version,
     description="Graphene SQLAlchemy integration",
     long_description=open("README.rst").read(),

@@ -410,7 +410,7 @@ class SQLAlchemyMutation(Mutation):
         super(SQLAlchemyMutation, cls).__init_subclass_with_meta__(_meta=meta, output=output_type, arguments=arguments, **options)
 
     @classmethod
-    def mutate(cls, info, **kwargs):
+    def mutate(cls, root, info, **kwargs):
         session = get_session(info.context)
         with session.no_autoflush:
             meta = cls._meta
