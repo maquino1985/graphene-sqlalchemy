@@ -33,11 +33,12 @@ tests_require = [
 setup(
     name="abc-graphene-sqlalchemy",
     version=version,
-    description="Graphene SQLAlchemy integration",
+    description="Custom Extension of the original Graphene SQLAlchemy integration",
     long_description=open("README.rst").read(),
     url="https://github.com/maquino1985/graphene-sqlalchemy",
-    author="Syrus Akbary",
-    author_email="me@syrusakbary.com",
+    author="Mark Aquino",
+    credits="Syrus Akbary (me@syrusakbary.com)",
+    author_email="maquino1985@gmail.com",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
