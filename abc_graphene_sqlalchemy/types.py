@@ -438,7 +438,7 @@ class SQLAlchemyMutation(Mutation):
                             setattr(model, key, value)
 
                 setModelAttributes(model, kwargs['input'])
-            session.commit()
+            session.flush()  # session.commit() now throws session state exception: 'already committed'
 
             return model
 
