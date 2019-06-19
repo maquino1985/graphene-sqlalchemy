@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import copy
 import logging
 import re
 from collections import OrderedDict
 from functools import partial
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 from uuid import UUID
+
+from sqlalchemy.ext.declarative import DeclarativeMeta
+
+if TYPE_CHECKING:
+    from typing import Union, Callable, Any
 
 from graphene import Argument, InputObjectType, Field, List
 from graphene.relay import Connection, ConnectionField
@@ -13,7 +20,7 @@ from graphene.utils.str_converters import to_snake_case
 from graphql import ResolveInfo
 from graphql_relay.connection.arrayconnection import connection_from_list_slice
 from promise import Promise, is_thenable
-from sqlalchemy import inspect, func
+from sqlalchemy import inspect, func, or_, and_
 from sqlalchemy.orm.query import Query
 
 from .converter import convert_sqlalchemy_type
@@ -237,6 +244,18 @@ def create_filter_clause(model, field, value):
     return clause
 
 
+def where_clause(model: DeclarativeMeta, filter: Mapping[str, Union[Mapping, str, int, bool, UUID]], operator=and_) -> Callable[[None], Any]:
+    clauses = operator()
+    for filter_name, filter_value in filter.items():
+        if filter_name == 'or' and isinstance(filter_value, Mapping):
+            clauses = operator(clauses, where_clause(model=model, filter=filter_value, operator=or_))
+        elif filter_name == 'and' and isinstance(filter_value, Mapping):
+            clauses = operator(clauses, where_clause(model=model, filter=filter_value, operator=and_))
+        else:
+            clauses = operator(clauses, create_filter_clause(model, filter_name, filter_value)())
+    return clauses.self_group()
+
+
 class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
     def __init__(self, type_, *args, **kwargs):
         model = type_._meta.model
@@ -244,16 +263,7 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
         super(SQLAlchemyFilteredConnectionField, self).__init__(type_, *args, **kwargs)
 
     @classmethod
-    def get_query(
-            cls,
-            model,
-            info: ResolveInfo,
-            filter=None,
-            sort=None,
-            group_by=None,
-            order_by=None,
-            **kwargs,
-    ):
+    def get_query(cls, model, info: ResolveInfo, where=None, sort=None, group_by=None, order_by=None, **kwargs):
         query = super().get_query(model, info, sort=None, **kwargs)
         # columns = inspect(model).columns.values()
         from abc_graphene_sqlalchemy.types import SQLAlchemyInputObjectType
@@ -267,20 +277,10 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
                 q = super().get_query(filter_model, info, sort=None, **kwargs)
                 # noinspection PyArgumentList
                 query.filter(model_filter_column == q.filter_by(**filter_value).one())
-        if filter:
-            and_filter = filter.get("and", {})
+        if where:
+            clause = where_clause(model=model, filter=where)
+            query = query.filter(clause)
 
-            for filter_name, filter_value in and_filter.items():
-                query = filter_query(query, model, filter_name, filter_value)
-
-            or_filter = filter.get("or", {})
-            import sqlalchemy as sa
-
-            or_clauses = sa.or_()
-            for filter_name, filter_value in or_filter.items():
-                clause = create_filter_clause(model, filter_name, filter_value)
-                or_clauses = sa.or_(or_clauses, clause())
-            query = query.filter(or_clauses)
         return query
 
     @classmethod
