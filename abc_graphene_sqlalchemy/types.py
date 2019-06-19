@@ -14,21 +14,38 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.inspection import inspect as sqlalchemyinspect
 from sqlalchemy.orm.exc import NoResultFound
 
-from .converter import (convert_sqlalchemy_column,
-                        convert_sqlalchemy_composite,
-                        convert_sqlalchemy_hybrid_method,
-                        convert_sqlalchemy_relationship)
-from .enums import (enum_for_field, sort_argument_for_object_type,
-                    sort_enum_for_object_type)
+from .converter import (
+    convert_sqlalchemy_column,
+    convert_sqlalchemy_composite,
+    convert_sqlalchemy_hybrid_method,
+    convert_sqlalchemy_relationship,
+)
+from .enums import (
+    enum_for_field,
+    sort_argument_for_object_type,
+    sort_enum_for_object_type,
+)
 from .fields import SQLAlchemyFilteredConnectionField
 from .fields import default_connection_field_factory
 from .interfaces import SQLAlchemyInterface
 from .registry import Registry, get_global_registry
-from .utils import get_query, is_mapped_class, is_mapped_instance, get_session, pluralize_name
+from .utils import (
+    get_query,
+    is_mapped_class,
+    is_mapped_instance,
+    get_session,
+    pluralize_name,
+)
 
 
 def construct_fields(
-        obj_type, model, registry, only_fields, exclude_fields, connection_field_factory, register_orm_field: bool = True
+        obj_type,
+        model,
+        registry,
+        only_fields,
+        exclude_fields,
+        connection_field_factory,
+        register_orm_field: bool = True,
 ):
     inspected_model = sqlalchemyinspect(model)
 
@@ -122,7 +139,7 @@ class SQLAlchemyObjectType(ObjectType):
             id=None,
             connection_field_factory=default_connection_field_factory,
             _meta=None,
-            **options
+            **options,
     ):
         assert is_mapped_class(model), (
             "You need to pass a valid SQLAlchemy Model in " '{}.Meta, received "{}".'
@@ -238,21 +255,29 @@ class SQLAlchemyInputObjectType(InputObjectType):
             id=None,
             connection_field_factory=default_connection_field_factory,
             _meta=None,
-            **options
+            **options,
     ):
         autoexclude = []
 
         # always pull ids out to a separate argument
         for col in sqlalchemy.inspect(model).columns:
-            if ((col.primary_key and col.autoincrement) or
-                    (isinstance(col.type, sqlalchemy.types.TIMESTAMP) and
-                     col.server_default is not None)):
+            if (col.primary_key and col.autoincrement) or (
+                    isinstance(col.type, sqlalchemy.types.TIMESTAMP)
+                    and col.server_default is not None
+            ):
                 autoexclude.append(col.name)
 
         if not registry:
             registry = get_global_registry()
         sqla_fields = yank_fields_from_attrs(
-            construct_fields(cls, model, registry, only_fields, exclude_fields + tuple(autoexclude), connection_field_factory),
+            construct_fields(
+                cls,
+                model,
+                registry,
+                only_fields,
+                exclude_fields + tuple(autoexclude),
+                connection_field_factory,
+            ),
             _as=Field,
         )
         # create accessor for model to be retrieved for querying
@@ -284,14 +309,23 @@ class SQLAlchemyInputObjectType(InputObjectType):
 
 
 class SQLAlchemyAutoSchemaFactory(ObjectType):
-
     @staticmethod
-    def set_fields_and_attrs(klazz: Type[ObjectType], node_model: Type[SQLAlchemyInterface], field_dict: Mapping[str, Field]):
+    def set_fields_and_attrs(
+            klazz: Type[ObjectType],
+            node_model: Type[SQLAlchemyInterface],
+            field_dict: Mapping[str, Field],
+    ):
         _name = to_snake_case(node_model.__name__)
-        field_dict[f'all_{(pluralize_name(_name))}'] = SQLAlchemyFilteredConnectionField(node_model)
+        field_dict[
+            f"all_{(pluralize_name(_name))}"
+        ] = SQLAlchemyFilteredConnectionField(node_model)
         field_dict[_name] = node_model.Field()
         setattr(klazz, _name, node_model.Field())
-        setattr(klazz, "all_{}".format(pluralize_name(_name)), SQLAlchemyFilteredConnectionField(node_model))
+        setattr(
+            klazz,
+            "all_{}".format(pluralize_name(_name)),
+            SQLAlchemyFilteredConnectionField(node_model),
+        )
 
     @classmethod
     def __init_subclass_with_meta__(
@@ -299,10 +333,10 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
             interfaces: Tuple[Type[SQLAlchemyInterface]] = (),
             models: Tuple[Type[DeclarativeMeta]] = (),
             excluded_models: Tuple[Type[DeclarativeMeta]] = (),
-            node_interface: Type[Node] = Type[Node],
+            node_interface: Type[Node] = Node,
             default_resolver: ResolveInfo = None,
             _meta=None,
-            **options
+            **options,
     ):
         if not _meta:
             _meta = ObjectTypeOptions(cls)
@@ -314,7 +348,9 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                 SQLAlchemyAutoSchemaFactory.set_fields_and_attrs(cls, interface, fields)
         for model in excluded_models:
             if model in models:
-                models = models[:models.index(model)] + models[models.index(model) + 1:]
+                models = (
+                        models[: models.index(model)] + models[models.index(model) + 1:]
+                )
         possible_types = ()
         for model in models:
             model_name = model.__name__
@@ -326,18 +362,32 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                 continue
             for iface in interfaces:
                 if issubclass(model, iface._meta.model):
-                    model_interface = (iface,)
+                    model_interface = iface
                     break
             else:
-                model_interface = (node_interface,)
+                model_interface = node_interface
 
-            _node_class = type(model_name,
-                               (SQLAlchemyObjectType,),
-                               {"Meta": {"model": model, "interfaces": model_interface, "only_fields": []}})
-            fields["all_{}".format(pluralize_name(_model_name))] = SQLAlchemyFilteredConnectionField(_node_class)
-            setattr(cls, "all_{}".format(pluralize_name(_model_name)), SQLAlchemyFilteredConnectionField(_node_class))
-            fields[_model_name] = node_interface.Field(_node_class)
-            setattr(cls, _model_name, node_interface.Field(_node_class))
+            _node_class = type(
+                model_name,
+                (SQLAlchemyObjectType,),
+                {
+                    "Meta": {
+                        "model": model,
+                        "interfaces": (model_interface,),
+                        "only_fields": [],
+                    }
+                },
+            )
+            fields[
+                "all_{}".format(pluralize_name(_model_name))
+            ] = SQLAlchemyFilteredConnectionField(_node_class)
+            setattr(
+                cls,
+                "all_{}".format(pluralize_name(_model_name)),
+                SQLAlchemyFilteredConnectionField(_node_class),
+            )
+            fields[_model_name] = model_interface.Field(_node_class)
+            setattr(cls, _model_name, model_interface.Field(_node_class))
             possible_types += (_node_class,)
         if _meta.fields:
             _meta.fields.update(fields)
@@ -345,10 +395,14 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
             _meta.fields = fields
         _meta.schema_types = possible_types
 
-        super(SQLAlchemyAutoSchemaFactory, cls).__init_subclass_with_meta__(_meta=_meta, default_resolver=default_resolver, **options)
+        super(SQLAlchemyAutoSchemaFactory, cls).__init_subclass_with_meta__(
+            _meta=_meta, default_resolver=default_resolver, **options
+        )
 
     @classmethod
-    def resolve_with_filters(cls, info: ResolveInfo, model: Type[SQLAlchemyObjectType], **kwargs):
+    def resolve_with_filters(
+            cls, info: ResolveInfo, model: Type[SQLAlchemyObjectType], **kwargs
+    ):
         query = model.get_query(info)
         for filter_name, filter_value in kwargs.items():
             model_filter_column = getattr(model._meta.model, filter_name, None)
@@ -356,7 +410,9 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                 continue
             if isinstance(filter_value, SQLAlchemyInputObjectType):
                 filter_model = filter_value.sqla_model
-                q = SQLAlchemyFilteredConnectionField.get_query(filter_model, info, sort=None, **kwargs)
+                q = SQLAlchemyFilteredConnectionField.get_query(
+                    filter_model, info, sort=None, **kwargs
+                )
                 # noinspection PyArgumentList
                 query = query.filter(model_filter_column == q.filter_by(**filter_value))
             else:
@@ -375,11 +431,18 @@ class SQLAlchemyMutationOptions(ObjectTypeOptions):
 
 class SQLAlchemyMutation(Mutation):
     @classmethod
-    def __init_subclass_with_meta__(cls, model=None, create=False,
-                                    delete=False, registry=None,
-                                    arguments=None, only_fields=(),
-                                    structure: Type[Structure] = None,
-                                    exclude_fields=(), **options):
+    def __init_subclass_with_meta__(
+            cls,
+            model=None,
+            create=False,
+            delete=False,
+            registry=None,
+            arguments=None,
+            only_fields=(),
+            structure: Type[Structure] = None,
+            exclude_fields=(),
+            **options,
+    ):
         meta = SQLAlchemyMutationOptions(cls)
         meta.create = create
         meta.model = model
@@ -389,25 +452,33 @@ class SQLAlchemyMutation(Mutation):
             arguments = {}
             # don't include id argument on create
             if not meta.create:
-                arguments['id'] = ID(required=True)
+                arguments["id"] = ID(required=True)
 
             # don't include input argument on delete
             if not meta.delete:
-                inputMeta = type('Meta', (object,), {
-                    'model': model,
-                    'exclude_fields': exclude_fields,
-                    'only_fields': only_fields
-                })
-                inputType = type(cls.__name__ + 'Input',
-                                 (SQLAlchemyInputObjectType,),
-                                 {'Meta': inputMeta})
-                arguments = {'input': inputType(required=True)}
+                inputMeta = type(
+                    "Meta",
+                    (object,),
+                    {
+                        "model": model,
+                        "exclude_fields": exclude_fields,
+                        "only_fields": only_fields,
+                    },
+                )
+                inputType = type(
+                    cls.__name__ + "Input",
+                    (SQLAlchemyInputObjectType,),
+                    {"Meta": inputMeta},
+                )
+                arguments = {"input": inputType(required=True)}
         if not registry:
             registry = get_global_registry()
         output_type: ObjectType = registry.get_type_for_model(model)
         if structure:
             output_type = structure(output_type)
-        super(SQLAlchemyMutation, cls).__init_subclass_with_meta__(_meta=meta, output=output_type, arguments=arguments, **options)
+        super(SQLAlchemyMutation, cls).__init_subclass_with_meta__(
+            _meta=meta, output=output_type, arguments=arguments, **options
+        )
 
     @classmethod
     def mutate(cls, root, info, **kwargs):
@@ -416,14 +487,18 @@ class SQLAlchemyMutation(Mutation):
             meta = cls._meta
 
             if meta.create:
-                model = meta.model(**kwargs['input'])
+                model = meta.model(**kwargs["input"])
                 session.add(model)
             else:
-                model = session.query(meta.model).filter(meta.model.id ==
-                                                         kwargs['id']).first()
+                model = (
+                    session.query(meta.model)
+                        .filter(meta.model.id == kwargs["id"])
+                        .first()
+                )
             if meta.delete:
                 session.delete(model)
             else:
+
                 def setModelAttributes(model, attrs):
                     relationships = model.__mapper__.relationships
                     for key, value in attrs.items():
@@ -431,19 +506,18 @@ class SQLAlchemyMutation(Mutation):
                             if getattr(model, key) is None:
                                 # instantiate class of the same type as
                                 # the relationship target
-                                setattr(model, key,
-                                        relationships[key].mapper.entity())
+                                setattr(model, key, relationships[key].mapper.entity())
                             setModelAttributes(getattr(model, key), value)
                         else:
                             setattr(model, key, value)
 
-                setModelAttributes(model, kwargs['input'])
+                setModelAttributes(model, kwargs["input"])
             session.flush()  # session.commit() now throws session state exception: 'already committed'
 
             return model
 
     @classmethod
     def Field(cls, *args, **kwargs):
-        return Field(cls._meta.output,
-                     args=cls._meta.arguments,
-                     resolver=cls._meta.resolver)
+        return Field(
+            cls._meta.output, args=cls._meta.arguments, resolver=cls._meta.resolver
+        )

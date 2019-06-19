@@ -1,5 +1,4 @@
-from graphene import (ID, Boolean, Dynamic, Enum, Field, Float, Int, List,
-                      String)
+from graphene import ID, Boolean, Dynamic, Enum, Field, Float, Int, List, String
 from graphene.types.json import JSONString
 from singledispatch import singledispatch
 from sqlalchemy import types

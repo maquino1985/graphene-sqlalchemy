@@ -1,4 +1,6 @@
+import copy
 import logging
+import re
 from collections import OrderedDict
 from functools import partial
 from typing import Mapping
@@ -22,22 +24,37 @@ log = logging.getLogger()
 argument_cache = {}
 field_cache = {}
 
+NAME_PATTERN = r"^[_a-zA-Z][_a-zA-Z0-9]*$"
+COMPILED_NAME_PATTERN = re.compile(NAME_PATTERN)
 
+
+# noinspection PyMethodOverriding
 class UnsortedSQLAlchemyConnectionField(ConnectionField):
     @property
     def type(self, assert_type: bool = True):
         from .types import SQLAlchemyObjectType, SQLAlchemyInputObjectType
         from .interfaces import SQLAlchemyInterface
+
         _type = super(ConnectionField, self).type
         if issubclass(_type, Connection):
             return _type
 
         if assert_type:
-            assert issubclass(_type, (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType)), (
-                "SQLALchemyConnectionField only accepts {} types, not {}"
-            ).format([x.__name__ for x in (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType)], _type.__name__)
-        assert _type._meta.connection \
-            , "The type {} doesn't have a connection".format(
+            assert issubclass(
+                _type,
+                (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType),
+            ), ("SQLALchemyConnectionField only accepts {} types, not {}").format(
+                [
+                    x.__name__
+                    for x in (
+                    SQLAlchemyObjectType,
+                    SQLAlchemyInterface,
+                    SQLAlchemyInputObjectType,
+                )
+                ],
+                _type.__name__,
+            )
+        assert _type._meta.connection, "The type {} doesn't have a connection".format(
             _type.__name__
         )
         return _type._meta.connection
@@ -122,16 +139,25 @@ def create_filter_argument(cls):
     name = "{}Filter".format(cls.__name__)
     if name in argument_cache:
         return Argument(argument_cache[name])
-    import re
 
-    NAME_PATTERN = r"^[_a-zA-Z][_a-zA-Z0-9]*$"
-    COMPILED_NAME_PATTERN = re.compile(NAME_PATTERN)
-    fields = OrderedDict((column.name, field)
-                         for column, field in [(column, create_filter_field(column))
-                                               for column in inspect(cls).columns.values()] if field and COMPILED_NAME_PATTERN.match(column.name))
+    fields = OrderedDict(
+        (column.name, field)
+        for column, field in [
+            (column, create_filter_field(column))
+            for column in inspect(cls).columns.values()
+        ]
+        if field and COMPILED_NAME_PATTERN.match(column.name)
+    )
     argument_class: InputObjectType = type(name, (FilterArgument, InputObjectType), {})
     argument_class._meta.fields.update(fields)
+
+    nested_argument_class: InputObjectType = copy.deepcopy(
+        argument_class
+    )  # not sure if necessary
+    argument_class._meta.fields["or"] = Argument(nested_argument_class)
+    argument_class._meta.fields["and"] = Argument(nested_argument_class)
     argument_cache[name] = argument_class
+
     return Argument(argument_class)
 
 
@@ -148,13 +174,17 @@ def filter_query(query, model, field, value):
         elif operator == "greaterThan":
             query = query.filter(getattr(model, field) > value)
         elif operator == "like":
-            query = query.filter(func.lower(getattr(model, field)).like(func.lower(f'%{value}%')))
+            query = query.filter(
+                func.lower(getattr(model, field)).like(func.lower(f"%{value}%"))
+            )
         elif operator == "in":
             query = query.filter(getattr(model, field).in_(value))
     elif isinstance(value, (str, int, UUID)):
         query = query.filter(getattr(model, field) == value)
     else:
-        raise NotImplementedError(f'Filter for value type {type(value)} for {field} of model {model} is not implemented')
+        raise NotImplementedError(
+            f"Filter for value type {type(value)} for {field} of model {model} is not implemented"
+        )
     return query
 
 
@@ -167,9 +197,11 @@ def create_filter_field(column):
     if name in field_cache:
         return Field(field_cache[name])
 
-    fields = OrderedDict((key, Field(graphene_type.__class__))
-                         for key in ["equal", "notEqual", "lessThan", "greaterThan", "like"])
-    fields['in'] = Field(List(graphene_type.__class__))
+    fields = OrderedDict(
+        (key, Field(graphene_type.__class__))
+        for key in ["equal", "notEqual", "lessThan", "greaterThan", "like"]
+    )
+    fields["in"] = Field(List(graphene_type.__class__))
     field_class: InputObjectType = type(name, (FilterField, InputObjectType), {})
     field_class._meta.fields.update(fields)
 
@@ -177,14 +209,51 @@ def create_filter_field(column):
     return Field(field_class)
 
 
+def create_filter_clause(model, field, value):
+    clause = ()
+    if isinstance(value, Mapping):
+        [(operator, value)] = value.items()
+        # does not work on UUID columns
+        if operator == "equal":
+            clause = lambda: getattr(model, field) == value
+        elif operator == "notEqual":
+            clause = lambda: getattr(model, field) != value
+        elif operator == "lessThan":
+            clause = lambda: getattr(model, field) < value
+        elif operator == "greaterThan":
+            clause = lambda: getattr(model, field) > value
+        elif operator == "like":
+            clause = lambda: func.lower(getattr(model, field)).like(
+                func.lower(f"%{value}%")
+            )
+        elif operator == "in":
+            clause = lambda: getattr(model, field).in_(value)
+    elif isinstance(value, (str, int, UUID)):
+        clause = lambda: getattr(model, field) == value
+    else:
+        raise NotImplementedError(
+            f"Filter for value type {type(value)} for {field} of model {model} is not implemented"
+        )
+    return clause
+
+
 class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
     def __init__(self, type_, *args, **kwargs):
         model = type_._meta.model
-        kwargs.setdefault("filter", create_filter_argument(model))
+        kwargs.setdefault("where", create_filter_argument(model))
         super(SQLAlchemyFilteredConnectionField, self).__init__(type_, *args, **kwargs)
 
     @classmethod
-    def get_query(cls, model, info: ResolveInfo, filter=None, sort=None, group_by=None, order_by=None, **kwargs):
+    def get_query(
+            cls,
+            model,
+            info: ResolveInfo,
+            filter=None,
+            sort=None,
+            group_by=None,
+            order_by=None,
+            **kwargs,
+    ):
         query = super().get_query(model, info, sort=None, **kwargs)
         # columns = inspect(model).columns.values()
         from abc_graphene_sqlalchemy.types import SQLAlchemyInputObjectType
@@ -199,15 +268,26 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
                 # noinspection PyArgumentList
                 query.filter(model_filter_column == q.filter_by(**filter_value).one())
         if filter:
-            for filter_name, filter_value in filter.items():
+            and_filter = filter.get("and", {})
+
+            for filter_name, filter_value in and_filter.items():
                 query = filter_query(query, model, filter_name, filter_value)
+
+            or_filter = filter.get("or", {})
+            import sqlalchemy as sa
+
+            or_clauses = sa.or_()
+            for filter_name, filter_value in or_filter.items():
+                clause = create_filter_clause(model, filter_name, filter_value)
+                or_clauses = sa.or_(or_clauses, clause())
+            query = query.filter(or_clauses)
         return query
 
     @classmethod
     def resolve_connection(cls, connection_type, model, info, args, resolved):
         filters = args.get("filter", {})
         field = getattr(info.schema._query, to_snake_case(info.field_name))
-        if field and hasattr(field, 'required') and field.required:
+        if field and hasattr(field, "required") and field.required:
             required_filters = [rf.key for rf in field.required]
 
             if required_filters:
@@ -216,7 +296,8 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
                     raise Exception(missing_filters)
 
         return super(SQLAlchemyFilteredConnectionField, cls).resolve_connection(
-            connection_type, model, info, args, resolved)
+            connection_type, model, info, args, resolved
+        )
 
 
 def default_connection_field_factory(relationship, registry):
@@ -231,16 +312,16 @@ __connectionFactory = UnsortedSQLAlchemyConnectionField
 
 def createConnectionField(_type):
     log.warning(
-        'createConnectionField is deprecated and will be removed in the next '
-        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.'
+        "createConnectionField is deprecated and will be removed in the next "
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
     )
     return __connectionFactory(_type)
 
 
 def registerConnectionFieldFactory(factoryMethod):
     log.warning(
-        'registerConnectionFieldFactory is deprecated and will be removed in the next '
-        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.'
+        "registerConnectionFieldFactory is deprecated and will be removed in the next "
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
     )
     global __connectionFactory
     __connectionFactory = factoryMethod
@@ -248,8 +329,8 @@ def registerConnectionFieldFactory(factoryMethod):
 
 def unregisterConnectionFieldFactory():
     log.warning(
-        'registerConnectionFieldFactory is deprecated and will be removed in the next '
-        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.'
+        "registerConnectionFieldFactory is deprecated and will be removed in the next "
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
     )
     global __connectionFactory
     __connectionFactory = UnsortedSQLAlchemyConnectionField

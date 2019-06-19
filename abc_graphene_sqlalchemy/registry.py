@@ -32,16 +32,29 @@ class Registry(object):
     def get_type_for_model(self, model):
         return self._registry.get(model)
 
-    def register_orm_field(self, obj_type, field_name, orm_field, assert_type: bool = True):
+    def register_orm_field(
+            self, obj_type, field_name, orm_field, assert_type: bool = True
+    ):
         from .types import SQLAlchemyObjectType, SQLAlchemyInputObjectType
         from .interfaces import SQLAlchemyInterface
+
         if assert_type:
             if not isinstance(obj_type, type) or not issubclass(
-                    obj_type, (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType)
+                    obj_type,
+                    (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType),
             ):
                 raise TypeError(
-                    "Expected one of {}, but got: {!r}".format([x.__name__ for x in (SQLAlchemyObjectType, SQLAlchemyInterface, SQLAlchemyInputObjectType)],
-                                                               obj_type)
+                    "Expected one of {}, but got: {!r}".format(
+                        [
+                            x.__name__
+                            for x in (
+                            SQLAlchemyObjectType,
+                            SQLAlchemyInterface,
+                            SQLAlchemyInputObjectType,
+                        )
+                        ],
+                        obj_type,
+                    )
                 )
         if not field_name or not isinstance(field_name, str):
             raise TypeError("Expected a field name, but got: {!r}".format(field_name))

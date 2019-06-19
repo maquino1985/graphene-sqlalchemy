@@ -171,8 +171,10 @@ def create_filter_field(column):
     if name in field_cache:
         return Field(field_cache[name])
 
-    fields = OrderedDict((key, Field(graphene_type.__class__))
-                         for key in ["equal", "notEqual", "lessThan", "greaterThan", "like"])
+    fields = OrderedDict(
+        (key, Field(graphene_type.__class__))
+        for key in ["equal", "notEqual", "lessThan", "greaterThan", "like"]
+    )
     field_class: InputObjectType = type(name, (FilterField, InputObjectType), {})
     field_class._meta.fields.update(fields)
 
@@ -183,6 +185,7 @@ def create_filter_field(column):
 def create_filter_argument(cls):
     from graphene import Argument, InputObjectType
     from sqlalchemy import inspect
+
     name = "{}Filter".format(cls.__name__)
     if name in argument_cache:
         return Argument(argument_cache[name])
@@ -190,9 +193,14 @@ def create_filter_argument(cls):
 
     NAME_PATTERN = r"^[_a-zA-Z][_a-zA-Z0-9]*$"
     COMPILED_NAME_PATTERN = re.compile(NAME_PATTERN)
-    fields = OrderedDict((column.name, field)
-                         for column, field in [(column, create_filter_field(column))
-                                               for column in inspect(cls).columns.values()] if field and COMPILED_NAME_PATTERN.match(column.name))
+    fields = OrderedDict(
+        (column.name, field)
+        for column, field in [
+            (column, create_filter_field(column))
+            for column in inspect(cls).columns.values()
+        ]
+        if field and COMPILED_NAME_PATTERN.match(column.name)
+    )
     argument_class: InputObjectType = type(name, (FilterArgument, InputObjectType), {})
     argument_class._meta.fields.update(fields)
     argument_cache[name] = argument_class
