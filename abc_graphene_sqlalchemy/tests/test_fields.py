@@ -26,13 +26,13 @@ class PetConn(Connection):
         node = Pet
 
 
-def test_filtered_added_by_default():
+def test_where_filter_added():
     field = SQLAlchemyFilteredConnectionField(Pet)
-    assert "filter" in field.args
-    assert issubclass(field.args['filter']._type, InputObjectType)
-    filter_fields = field.args['filter']._type._meta.fields
+    assert "where" in field.args
+    assert issubclass(field.args['where']._type, InputObjectType)
+    filter_fields = field.args['where']._type._meta.fields
     log.info(filter_fields)
-    filter_column_names = [column.name for column in inspect(Pet._meta.model).columns.values()]
+    filter_column_names = [column.name for column in inspect(Pet._meta.model).columns.values()] + ['and', 'or']
     for field_name, value in filter_fields.items():
         assert field_name in filter_column_names
 

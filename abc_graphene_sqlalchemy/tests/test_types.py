@@ -1,9 +1,11 @@
+import pytest
 from collections import OrderedDict
 
 from graphene import (Connection, Field, Int, Interface, Node, ObjectType,
                       is_node)
 from promise import Promise
 
+from abc_graphene_sqlalchemy.fields import createConnectionField
 from .models import Article, Reporter
 from ..fields import (SQLAlchemyConnectionField,
                       UnsortedSQLAlchemyConnectionField,
@@ -15,39 +17,19 @@ from ..types import SQLAlchemyObjectType, SQLAlchemyObjectTypeOptions
 registry = Registry()
 
 
-class Character(SQLAlchemyObjectType):
-    """Character description"""
-
-    class Meta:
-        model = Reporter
-        registry = registry
-
-
-class Human(SQLAlchemyObjectType):
-    """Human description"""
-
-    pub_date = Int()
-
-    class Meta:
-        model = Article
-        exclude_fields = ("id",)
-        registry = registry
-        interfaces = (Node,)
-
-
 def test_sqlalchemy_interface():
     assert issubclass(Node, Interface)
     assert issubclass(Node, Node)
 
 
-# @patch('graphene.contrib.sqlalchemy.tests.models.Article.filter', return_value=Article(id=1))
-# def test_sqlalchemy_get_node(get):
-#     human = Human.get_node(1, None)
-#     get.assert_called_with(id=1)
-#     assert human.id == 1
-
-
 def test_objecttype_registered():
+    class Character(SQLAlchemyObjectType):
+        """Character description"""
+
+        class Meta:
+            model = Reporter
+            registry = registry
+
     assert issubclass(Character, ObjectType)
     assert Character._meta.model == Reporter
     assert list(Character._meta.fields.keys()) == [
@@ -70,12 +52,6 @@ def test_objecttype_registered():
 # def test_node_idfield():
 #     idfield = Human._meta.fields_map['id']
 #     assert isinstance(idfield, GlobalIDField)
-
-
-def test_node_replacedfield():
-    idfield = Human._meta.fields["pub_date"]
-    assert isinstance(idfield, Field)
-    assert idfield.type == Int
 
 
 def test_object_type():
@@ -102,20 +78,18 @@ def test_object_type():
 
 
 # Test Custom SQLAlchemyObjectType Implementation
-class CustomSQLAlchemyObjectType(SQLAlchemyObjectType):
-    class Meta:
-        abstract = True
-
-
-class CustomCharacter(CustomSQLAlchemyObjectType):
-    """Character description"""
-
-    class Meta:
-        model = Reporter
-        registry = registry
-
-
 def test_custom_objecttype_registered():
+    class CustomSQLAlchemyObjectType(SQLAlchemyObjectType):
+        class Meta:
+            abstract = True
+
+    class CustomCharacter(CustomSQLAlchemyObjectType):
+        """Character description"""
+
+        class Meta:
+            model = Reporter
+            # registry = registry
+
     assert issubclass(CustomCharacter, ObjectType)
     assert CustomCharacter._meta.model == Reporter
     assert list(CustomCharacter._meta.fields.keys()) == [
@@ -142,7 +116,7 @@ class SQLAlchemyObjectTypeWithCustomOptions(SQLAlchemyObjectType):
 
     @classmethod
     def __init_subclass_with_meta__(
-        cls, custom_option=None, custom_fields=None, **options
+            cls, custom_option=None, custom_fields=None, **options
     ):
         _meta = CustomOptions(cls)
         _meta.custom_option = custom_option
@@ -152,14 +126,13 @@ class SQLAlchemyObjectTypeWithCustomOptions(SQLAlchemyObjectType):
         )
 
 
-class ReporterWithCustomOptions(SQLAlchemyObjectTypeWithCustomOptions):
-    class Meta:
-        model = Reporter
-        custom_option = "custom_option"
-        custom_fields = OrderedDict([("custom_field", Field(Int()))])
-
-
 def test_objecttype_with_custom_options():
+    class ReporterWithCustomOptions(SQLAlchemyObjectTypeWithCustomOptions):
+        class Meta:
+            model = Reporter
+            custom_option = "custom_option"
+            custom_fields = OrderedDict([("custom_field", Field(Int()))])
+
     assert issubclass(ReporterWithCustomOptions, ObjectType)
     assert ReporterWithCustomOptions._meta.model == Reporter
     assert list(ReporterWithCustomOptions._meta.fields.keys()) == [
@@ -178,6 +151,12 @@ def test_objecttype_with_custom_options():
 
 
 def test_promise_connection_resolver():
+    class ReporterWithCustomOptions(SQLAlchemyObjectTypeWithCustomOptions):
+        class Meta:
+            model = Reporter
+            custom_option = "custom_option"
+            custom_fields = OrderedDict([("custom_field", Field(Int()))])
+
     class TestConnection(Connection):
         class Meta:
             node = ReporterWithCustomOptions
@@ -240,41 +219,40 @@ def test_register_connection_field_factory():
 
 
 def test_deprecated_registerConnectionFieldFactory():
-    registerConnectionFieldFactory(_TestSQLAlchemyConnectionField)
+    with pytest.warns(DeprecationWarning):
+        registerConnectionFieldFactory(_TestSQLAlchemyConnectionField)
 
-    _registry = Registry()
+        class ReporterType(SQLAlchemyObjectType):
+            class Meta:
+                model = Reporter
+                interfaces = (Node,)
 
-    class ReporterType(SQLAlchemyObjectType):
-        class Meta:
-            model = Reporter
-            registry = _registry
-            interfaces = (Node,)
+        class ArticleType(SQLAlchemyObjectType):
+            class Meta:
+                model = Article
+                interfaces = (Node,)
 
-    class ArticleType(SQLAlchemyObjectType):
-        class Meta:
-            model = Article
-            registry = _registry
-            interfaces = (Node,)
-
-    assert isinstance(ReporterType._meta.fields['articles'].type(), _TestSQLAlchemyConnectionField)
+        assert isinstance(ReporterType._meta.fields['articles'].type(), _TestSQLAlchemyConnectionField)
 
 
 def test_deprecated_unregisterConnectionFieldFactory():
-    registerConnectionFieldFactory(_TestSQLAlchemyConnectionField)
-    unregisterConnectionFieldFactory()
+    with pytest.warns(DeprecationWarning):
+        registerConnectionFieldFactory(_TestSQLAlchemyConnectionField)
+        unregisterConnectionFieldFactory()
 
-    _registry = Registry()
+        class ReporterType(SQLAlchemyObjectType):
+            class Meta:
+                model = Reporter
+                interfaces = (Node,)
 
-    class ReporterType(SQLAlchemyObjectType):
-        class Meta:
-            model = Reporter
-            registry = _registry
-            interfaces = (Node,)
+        class ArticleType(SQLAlchemyObjectType):
+            class Meta:
+                model = Article
+                interfaces = (Node,)
 
-    class ArticleType(SQLAlchemyObjectType):
-        class Meta:
-            model = Article
-            registry = _registry
-            interfaces = (Node,)
+        assert not isinstance(ReporterType._meta.fields['articles'].type(), _TestSQLAlchemyConnectionField)
 
-    assert not isinstance(ReporterType._meta.fields['articles'].type(), _TestSQLAlchemyConnectionField)
+
+def test_deprecated_createConnectionField():
+    with pytest.warns(DeprecationWarning):
+        createConnectionField(None)

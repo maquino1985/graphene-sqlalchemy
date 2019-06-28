@@ -26,7 +26,7 @@ def test_register_incorrect_object_type():
     class Spam:
         pass
 
-    re_err = "Expected SQLAlchemyObjectType, but got: .*Spam"
+    re_err = "Expected SQLAlchemyObjectType or SQLAlchemyInterface, but got: .*Spam"
     with pytest.raises(TypeError, match=re_err):
         reg.register(Spam)
 
