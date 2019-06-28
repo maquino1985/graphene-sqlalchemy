@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import warnings
 import re
 from collections import OrderedDict
 from functools import partial
@@ -311,26 +312,29 @@ __connectionFactory = UnsortedSQLAlchemyConnectionField
 
 
 def createConnectionField(_type):
-    log.warning(
+    warnings.warn(
         "createConnectionField is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        DeprecationWarning,
     )
     return __connectionFactory(_type)
 
 
 def registerConnectionFieldFactory(factoryMethod):
-    log.warning(
+    warnings.warn(
         "registerConnectionFieldFactory is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        DeprecationWarning,
     )
     global __connectionFactory
     __connectionFactory = factoryMethod
 
 
 def unregisterConnectionFieldFactory():
-    log.warning(
+    warnings.warn(
         "registerConnectionFieldFactory is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead."
+        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        DeprecationWarning,
     )
     global __connectionFactory
     __connectionFactory = UnsortedSQLAlchemyConnectionField
