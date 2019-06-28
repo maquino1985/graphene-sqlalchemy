@@ -8,7 +8,7 @@ from .types import (
 )
 from .utils import get_query, get_session
 
-__version__ = "2.2.3a"
+__version__ = "2.2.3.1"
 
 __all__ = [
     "__version__",

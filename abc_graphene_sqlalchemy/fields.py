@@ -245,7 +245,7 @@ def create_filter_clause(model, field, value):
 
 
 def where_clause(model: DeclarativeMeta, filter: Mapping[str, Union[Mapping, str, int, bool, UUID]], operator=and_) -> Callable[[None], Any]:
-    clauses = operator()
+    clauses = operator() # https://docs.sqlalchemy.org/en/13/core/sqlelement.html
     for filter_name, filter_value in filter.items():
         if filter_name == 'or' and isinstance(filter_value, Mapping):
             clauses = operator(clauses, where_clause(model=model, filter=filter_value, operator=or_))

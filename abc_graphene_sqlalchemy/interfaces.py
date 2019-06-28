@@ -54,6 +54,7 @@ class SQLAlchemyInterface(Node):
             only_fields: Tuple[str] = (),
             exclude_fields: Tuple[str] = (),
             connection_field_factory: UnsortedSQLAlchemyConnectionField = default_connection_field_factory,
+            skip_registry: Optional[bool] = False,
             **options,
     ):
         _meta = SQLAlchemyInterfaceOptions(cls)
@@ -104,6 +105,8 @@ class SQLAlchemyInterface(Node):
         _meta.fields["id"] = graphene.GlobalID(cls, description="The ID of the object.")
         # call super of AbstractNode directly because it creates its own _meta, which we don't want
         super(AbstractNode, cls).__init_subclass_with_meta__(_meta=_meta, **options)
+        if not skip_registry:
+            registry.register(cls)
 
     @classmethod
     def Field(cls, *args, **kwargs):  # noqa: N802

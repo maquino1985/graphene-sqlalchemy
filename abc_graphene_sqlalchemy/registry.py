@@ -14,19 +14,21 @@ class Registry(object):
         self._registry_sort_enums = {}
 
     def register(self, obj_type):
+
         from .types import SQLAlchemyObjectType
+        from .interfaces import SQLAlchemyInterface
 
         if not isinstance(obj_type, type) or not issubclass(
-            obj_type, SQLAlchemyObjectType
+                obj_type, (SQLAlchemyObjectType, SQLAlchemyInterface,)
         ):
             raise TypeError(
-                "Expected SQLAlchemyObjectType, but got: {!r}".format(obj_type)
+                "Expected SQLAlchemyObjectType or SQLAlchemyInterface, but got: {!r}".format(obj_type)
             )
         assert obj_type._meta.registry == self, "Registry for a Model have to match."
-        # assert self.get_type_for_model(cls._meta.model) in [None, cls], (
-        #     'SQLAlchemy model "{}" already associated with '
-        #     'another type "{}".'
-        # ).format(cls._meta.model, self._registry[cls._meta.model])
+        assert self.get_type_for_model(obj_type._meta.model) in [None, obj_type], (
+            'SQLAlchemy model "{}" already associated with '
+            'another type "{}".'
+        ).format(obj_type._meta.model, self._registry[obj_type._meta.model])
         self._registry[obj_type._meta.model] = obj_type
 
     def get_type_for_model(self, model):
