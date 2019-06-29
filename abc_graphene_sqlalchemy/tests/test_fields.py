@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+from promise import Promise
+
 from graphene import InputObjectType
 from graphene.relay import Connection
 from sqlalchemy import inspect
@@ -21,9 +23,19 @@ class Editor(SQLAlchemyObjectType):
         model = EditorModel
 
 
-class PetConn(Connection):
+class PetConnection(Connection):
     class Meta:
         node = Pet
+
+
+def test_promise_connection_resolver():
+    def resolver(_obj, _info):
+        return Promise.resolve([])
+
+    result = SQLAlchemyConnectionField.connection_resolver(
+        resolver, PetConnection, Pet, None, None
+    )
+    assert isinstance(result, Promise)
 
 
 def test_where_filter_added():
@@ -43,18 +55,18 @@ def test_init_raises():
 
 
 def test_sort_added_by_default():
-    field = SQLAlchemyConnectionField(PetConn)
+    field = SQLAlchemyConnectionField(PetConnection)
     assert "sort" in field.args
     assert field.args["sort"] == Pet.sort_argument()
 
 
 def test_sort_can_be_removed():
-    field = SQLAlchemyConnectionField(PetConn, sort=None)
+    field = SQLAlchemyConnectionField(PetConnection, sort=None)
     assert "sort" not in field.args
 
 
 def test_custom_sort():
-    field = SQLAlchemyConnectionField(PetConn, sort=Editor.sort_argument())
+    field = SQLAlchemyConnectionField(PetConnection, sort=Editor.sort_argument())
     assert field.args["sort"] == Editor.sort_argument()
 
 

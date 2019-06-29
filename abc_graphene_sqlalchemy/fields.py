@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import copy
 import logging
-import warnings
 import re
 from collections import OrderedDict
+import warnings
 from functools import partial
 from typing import TYPE_CHECKING, Mapping
 from uuid import UUID
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
+
+from .utils import EnumValue
 
 if TYPE_CHECKING:
     from typing import Union, Callable, Any
@@ -75,7 +77,7 @@ class UnsortedSQLAlchemyConnectionField(ConnectionField):
     def get_query(cls, model, info, sort=None, **args):
         query = get_query(model, info.context)
         if sort is not None:
-            if isinstance(sort, str):
+            if isinstance(sort, EnumValue):
                 query = query.order_by(sort.value)
             else:
                 query = query.order_by(*(col.value for col in sort))
@@ -197,7 +199,7 @@ def filter_query(query, model, field, value):
 
 
 def create_filter_field(column):
-    graphene_type = convert_sqlalchemy_type(column.type, column)
+    graphene_type = convert_sqlalchemy_type(column.type, column)()
     if graphene_type.__class__ == Field:
         return None
 
@@ -267,7 +269,7 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
     def get_query(cls, model, info: ResolveInfo, where=None, sort=None, group_by=None, order_by=None, **kwargs):
         query = super().get_query(model, info, sort=None, **kwargs)
         # columns = inspect(model).columns.values()
-        from abc_graphene_sqlalchemy.types import SQLAlchemyInputObjectType
+        from .types import SQLAlchemyInputObjectType
 
         for filter_name, filter_value in kwargs.items():
             model_filter_column = getattr(model, filter_name, None)
@@ -301,29 +303,29 @@ class SQLAlchemyFilteredConnectionField(UnsortedSQLAlchemyConnectionField):
         )
 
 
-def default_connection_field_factory(relationship, registry):
+def default_connection_field_factory(relationship, registry, **field_kwargs):
     model = relationship.mapper.entity
     model_type = registry.get_type_for_model(model)
-    return createConnectionField(model_type)
+    return __connectionFactory(model_type, **field_kwargs)
 
 
 # TODO Remove in next major version
 __connectionFactory = UnsortedSQLAlchemyConnectionField
 
 
-def createConnectionField(_type):
+def createConnectionField(_type, **field_kwargs):
     warnings.warn(
-        "createConnectionField is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        'createConnectionField is deprecated and will be removed in the next '
+        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.',
         DeprecationWarning,
     )
-    return __connectionFactory(_type)
+    return __connectionFactory(_type, **field_kwargs)
 
 
 def registerConnectionFieldFactory(factoryMethod):
     warnings.warn(
-        "registerConnectionFieldFactory is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        'registerConnectionFieldFactory is deprecated and will be removed in the next '
+        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.',
         DeprecationWarning,
     )
     global __connectionFactory
@@ -332,8 +334,8 @@ def registerConnectionFieldFactory(factoryMethod):
 
 def unregisterConnectionFieldFactory():
     warnings.warn(
-        "registerConnectionFieldFactory is deprecated and will be removed in the next "
-        "major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.",
+        'registerConnectionFieldFactory is deprecated and will be removed in the next '
+        'major version. Use SQLAlchemyObjectType.Meta.connection_field_factory instead.',
         DeprecationWarning,
     )
     global __connectionFactory
