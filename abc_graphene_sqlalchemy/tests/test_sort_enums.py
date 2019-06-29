@@ -251,7 +251,6 @@ def test_sort_query(session):
     class PetConnection(Connection):
         class Meta:
             node = PetNode
-
     class Query(ObjectType):
         defaultSort = SQLAlchemyConnectionField(PetConnection)
         nameSort = SQLAlchemyConnectionField(PetConnection)
