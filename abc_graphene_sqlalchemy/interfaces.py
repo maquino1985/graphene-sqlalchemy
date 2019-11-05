@@ -8,6 +8,7 @@ import graphene
 import sqlalchemy
 from graphene.relay.node import NodeField, AbstractNode
 from graphene.types.interface import InterfaceOptions
+from graphql import GraphQLError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
 from .registry import Registry
@@ -117,14 +118,22 @@ class SQLAlchemyInterface(Node):
         return cls.get_node_from_global_id(info, id, only_type=only_type)
 
     @classmethod
-    def get_node_from_global_id(cls, info, global_id, only_type=None):
+    def get_node_from_global_id(cls, info, global_id, only_type: Node = None):
         try:
-            node: DeclarativeMeta = info.context.get("session").query(
-                cls._meta.model
-            ).filter_by(id=global_id).one()
-            return node
+            query = info.context.get("session").query(only_type._meta.model)
+            try:
+                global_id = UUID(global_id)
+                node: DeclarativeMeta = query.filter_by(id=global_id).one_or_none()
+            except ValueError:
+                visible_id = int(global_id)
+                node: DeclarativeMeta = query.filter_by(
+                    visible_id=visible_id
+                ).one_or_none()
         except Exception:
-            return None
+            raise GraphQLError(
+                f"{only_type._meta.model.__name__}.get_node_from_global_id: unable to determine node from {global_id} for {only_type._meta.model}"
+            )
+        return node
 
     @classmethod
     def from_global_id(cls, global_id):

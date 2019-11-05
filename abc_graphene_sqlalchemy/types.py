@@ -168,7 +168,12 @@ def construct_fields(
     for orm_field_name in auto_orm_field_names:
         if orm_field_name in orm_fields:
             continue
-        orm_fields[orm_field_name] = ORMField(model_attr=orm_field_name)
+        required = False
+        try:
+            required = not all_model_attrs[orm_field_name].columns[0].nullable
+        except:
+            pass
+        orm_fields[orm_field_name] = ORMField(model_attr=orm_field_name, required=required)
 
     # Build all the field dictionary
     fields = OrderedDict()
