@@ -446,17 +446,19 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
         for model in models:
             model_name = model.__name__
             _model_name = to_snake_case(model.__name__)
-
             if hasattr(cls, _model_name):
                 continue
             if hasattr(cls, "all_{}".format(pluralize_name(_model_name))):
                 continue
+
+            _model_interfaces = []
+
             for iface in interfaces:
                 if issubclass(model, iface._meta.model):
-                    model_interface = iface
-                    break
-            else:
-                model_interface = node_interface
+                    _model_interfaces.append(iface)
+
+            if not _model_interfaces:
+                _model_interfaces = [node_interface]
 
             _node_class = type(
                 model_name,
@@ -464,7 +466,7 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                 {
                     "Meta": {
                         "model": model,
-                        "interfaces": (model_interface,),
+                        "interfaces": (tuple(_model_interfaces)),
                         "only_fields": [],
                     }
                 },
@@ -477,8 +479,9 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                 "all_{}".format(pluralize_name(_model_name)),
                 SQLAlchemyFilteredConnectionField(_node_class),
             )
-            fields[_model_name] = model_interface.Field(_node_class)
-            setattr(cls, _model_name, model_interface.Field(_node_class))
+            iface = _model_interfaces[0]
+            fields[_model_name] = iface.Field(_node_class)
+            setattr(cls, _model_name, iface.Field(_node_class))
             possible_types += (_node_class,)
         if _meta.fields:
             _meta.fields.update(fields)
