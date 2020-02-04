@@ -8,7 +8,7 @@ import graphene
 import sqlalchemy
 from graphene.relay.node import NodeField, AbstractNode
 from graphene.types.interface import InterfaceOptions
-from graphene.utils.subclass_with_meta import SubclassWithMeta, SubclassWithMeta_Meta
+from graphene.utils.subclass_with_meta import SubclassWithMeta_Meta
 from graphql import GraphQLError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
