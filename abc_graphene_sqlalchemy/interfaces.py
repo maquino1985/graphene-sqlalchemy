@@ -8,6 +8,7 @@ import graphene
 import sqlalchemy
 from graphene.relay.node import NodeField, AbstractNode
 from graphene.types.interface import InterfaceOptions
+from graphene.utils.subclass_with_meta import SubclassWithMeta, SubclassWithMeta_Meta
 from graphql import GraphQLError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 
@@ -118,9 +119,12 @@ class SQLAlchemyInterface(Node):
         return cls.get_node_from_global_id(info, id, only_type=only_type)
 
     @classmethod
-    def get_node_from_global_id(cls, info, global_id, only_type: Node = None):
+    def get_node_from_global_id(cls, info, global_id, only_type: Optional[Union[bool, SubclassWithMeta_Meta]] = None):
         try:
-            query = info.context.get("session").query(only_type._meta.model)
+            if isinstance(only_type, SubclassWithMeta_Meta):
+                query = info.context.get("session").query(only_type._meta.model)
+            else:
+                query = info.context.get("session").query(cls._meta.model)
             try:
                 global_id = UUID(global_id)
                 node: DeclarativeMeta = query.filter_by(id=global_id).one_or_none()
