@@ -91,6 +91,10 @@ class UnsortedSQLAlchemyConnectionField(ConnectionField):
             _len = resolved.count()
         else:
             _len = len(resolved)
+
+        if isinstance(resolved, set):
+            resolved = list(resolved)
+
         connection = connection_from_list_slice(
             resolved,
             args,
