@@ -2,6 +2,7 @@ import re
 import warnings
 from collections import OrderedDict
 
+import inflection
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import class_mapper, object_mapper
 from sqlalchemy.orm.exc import UnmappedClassError, UnmappedInstanceError
@@ -117,10 +118,40 @@ def sort_enum_for_model(cls, name=None, symbol_name=None):
     )
 
 
-def pluralize_name(name):
-    s1 = re.sub("y$", "ie", name)
-    return "{}s".format(s1)
+def pluralize_name(name: str) -> str:
+    """pluralize_name
 
+    Args:
+        name (str):
+
+    Returns:
+        Plural noun (str)
+
+    E.g.,
+        >>> pluralize("post")
+        "posts"
+
+        >>> pluralize("octopus")
+        "octopi"
+
+        >>> pluralize("sheep")
+        "sheep"
+
+        >>> pluralize("CamelOctopus")
+        "CamelOctopi"
+
+    References:
+        `inflection.pluralize.__doc__`
+
+    ``` # Former code:
+        def pluralize_name(name):
+            s1 = re.sub("y$", "ie", name)
+            return "{}s".format(s1)
+    ```
+
+    """
+
+    return inflection.pluralize(name)
 
 def sort_argument_for_model(cls, has_default=True):
     """Get a Graphene Argument for sorting the given model class.

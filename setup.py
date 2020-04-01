@@ -17,6 +17,7 @@ requirements = [
     "SQLAlchemy>=1.1,<2",
     "six>=1.10.0,<2",
     "singledispatch>=3.4.0.3,<4",
+    "inflection==0.3.1",
 ]
 try:
     import enum
