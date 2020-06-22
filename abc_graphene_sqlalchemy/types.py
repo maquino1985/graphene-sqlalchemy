@@ -424,6 +424,7 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
             interfaces: Tuple[Type[SQLAlchemyInterface]] = (),
             models: Tuple[Type[DeclarativeMeta]] = (),
             excluded_models: Tuple[Type[DeclarativeMeta]] = (),
+            exclude_model_fields: Tuple[str] = (),
             node_interface: Type[Node] = Node,
             default_resolver: ResolveInfo = None,
             _meta=None,
@@ -436,6 +437,7 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
 
         for interface in interfaces:
             if issubclass(interface, SQLAlchemyInterface):
+                # sets fields and attrs based on model columns not all sqla properties
                 SQLAlchemyAutoSchemaFactory.set_fields_and_attrs(cls, interface, fields)
         for model in excluded_models:
             if model in models:
@@ -468,6 +470,7 @@ class SQLAlchemyAutoSchemaFactory(ObjectType):
                         "model": model,
                         "interfaces": (tuple(_model_interfaces)),
                         "only_fields": [],
+                        "exclude_fields": exclude_model_fields
                     }
                 },
             )
