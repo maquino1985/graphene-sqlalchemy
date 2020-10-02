@@ -170,13 +170,13 @@ def convert_choice_to_enum(type, column, registry=None):
 
 @convert_sqlalchemy_type.register(ScalarListType)
 def convert_scalar_list_to_list(type, column, registry=None):
-    return List(String)
+    return lambda: List(String)
 
 
 @convert_sqlalchemy_type.register(postgresql.ARRAY)
 def convert_postgres_array_to_list(_type, column, registry=None):
     inner_type = convert_sqlalchemy_type(column.type.item_type, column)
-    return List(inner_type)
+    return lambda: List(inner_type)
 
 
 @convert_sqlalchemy_type.register(postgresql.HSTORE)

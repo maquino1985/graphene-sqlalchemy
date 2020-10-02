@@ -204,7 +204,7 @@ def filter_query(query, model, field, value):
 
 def create_filter_field(column):
     graphene_type = convert_sqlalchemy_type(column.type, column)()
-    if graphene_type.__class__ == Field:
+    if graphene_type.__class__ == Field or graphene_type.__class__ == List:
         return None
 
     name = "{}Filter".format(str(graphene_type.__class__))
